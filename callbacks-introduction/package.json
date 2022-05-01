@@ -1,0 +1,21 @@
+{
+  "name": "nodejs-course",
+  "version": "1.0.0",
+  "description": "Simple Node Example",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodingTeeRex/coursera-nodejs-tutorial.git"
+  },
+  "author": "Ivan Pua",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CodingTeeRex/coursera-nodejs-tutorial/issues"
+  },
+  "homepage": "https://github.com/CodingTeeRex/coursera-nodejs-tutorial#readme",
+  "type": "commonjs"
+}
