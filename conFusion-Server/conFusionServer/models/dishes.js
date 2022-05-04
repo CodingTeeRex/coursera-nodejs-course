@@ -37,11 +37,11 @@ const dishSchema = new schema({
     },
     category: {
         type: String,
-        default: ""
+        required: true
     },
     label: {
         type: String,
-        required: true
+        default: ""
     },
     price: {
         type: Currency,
