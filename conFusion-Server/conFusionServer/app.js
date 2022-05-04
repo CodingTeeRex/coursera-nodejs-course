@@ -5,6 +5,8 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
+const passport = require('passport');
+const authenticate = require('./authenticate');
 
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
@@ -42,41 +44,21 @@ app.use(session({
   store: new FileStore()
 }));
 
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use('/', indexRouter);
+app.use('/users', usersRouter);
+
 const auth = (req, res, next) => {
   console.log(req.session);
 
-  if (!req.session.user) {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      const err = new Error("You are not authenticated!");
-      res.setHeader('WWW-Authenticate', 'Basic');
-      err.status = 401;
-      return next(err);
-    }
-  
-    const auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-    const username = auth[0];
-    const password = auth[1];
-  
-    if (username === "admin" && password === "password") {
-      // setup session
-      req.session.user = "admin";
-      next(); // carry on to the next middleware
-    } else {
-      const err = new Error("You are not authenticated!");
-      res.setHeader('WWW-Authenticate', 'Basic');
-      err.status = 401;
-      return next(err);
-    }
+  if (!req.user) {
+    const err = new Error("You are not authenticated!");
+    err.status = 401;
+    return next(err);
   } else {
-    if (req.session.user === "admin") {
-      next();
-    } else {
-      const err = new Error("You are not authenticated!");
-      res.setHeader('WWW-Authenticate', 'Basic');
-      err.status = 401;
-    }
+    next();
   }
 }
 
@@ -84,8 +66,6 @@ app.use(auth);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
 app.use('/dishes', dishRouter);
 app.use('/promotions', promoRouter);
 app.use('/leaders', leaderRouter);
