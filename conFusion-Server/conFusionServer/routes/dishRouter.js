@@ -16,7 +16,7 @@ dishRouter.route("/")
         res.json(dishes);
     }, (err) => next(err)).catch((err) => next(err));
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Dishes.create(req.body).then((dish) => {
         console.log("Dish Created ", dish);
         res.statusCode = 200;
@@ -24,11 +24,11 @@ dishRouter.route("/")
         res.json(dish);
     }, (err) => next(err)).catch((err) => next(err));
 })
-.put(authenticate.verifyUser, (req, res) => {
+.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res) => {
     res.statusCode = 403;
     res.end("PUT operation not supported on /dishes");
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Dishes.remove({}).then((resp) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -44,11 +44,11 @@ dishRouter.route("/:dishId")
         res.json(dishes);
     }, (err) => next(err)).catch((err) => next(err));
 })
-.post(authenticate.verifyUser, (req, res) => {
+.post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res) => {
     res.statusCode = 403;
     res.end("POST operation not supported on /dishes/" + req.params.dishId);
 })
-.put(authenticate.verifyUser, (req, res, next) => {
+.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Dishes.findByIdAndUpdate(req.params.dishId, {
         $set: req.body
     }, { new: true }).then((dish) => {
@@ -57,7 +57,7 @@ dishRouter.route("/:dishId")
         res.json(dish);
     }, (err) => next(err)).catch((err) => next(err));
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Dishes.findOneAndRemove(req.params.dishId).then((resp) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -109,7 +109,7 @@ dishRouter.route("/:dishId/comments")
     res.statusCode = 403;
     res.end(`PUT operation not supported on /dishes/${req.params.dishId}/comments`);
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Dishes.findById(req.params.dishId).then((dish) => {
         if (dish !== null) {
             for (let i = dish.comments.length - 1; i >= 0; i--) {
@@ -136,11 +136,11 @@ dishRouter.route("/:dishId/comments/:commentId")
             res.setHeader('Content-Type', 'application/json');
             res.json(dish.comments.id(req.params.commentId));
         } else if (dish === null) {
-            err = new Error(`Dish ${req.params.dishId} not found`);
+            const err = new Error(`Dish ${req.params.dishId} not found`);
             err.status = 404;
             return next(err);
         } else {
-            err = new Error(`Comment ${req.params.commentId} not found`);
+            const err = new Error(`Comment ${req.params.commentId} not found`);
             err.status = 404;
             return next(err);
         }
@@ -153,6 +153,7 @@ dishRouter.route("/:dishId/comments/:commentId")
 .put(authenticate.verifyUser, (req, res, next) => {
     Dishes.findById(req.params.dishId).then((dish) => {
         if (dish !== null && dish.comments.id(req.params.commentId) !== null) {
+            console.log({dish})
             if (req.body.rating) {
                 dish.comments.id(req.params.commentId).rating = req.body.rating;
             }
@@ -168,34 +169,40 @@ dishRouter.route("/:dishId/comments/:commentId")
                 });
             })
         } else if (dish === null) {
-            err = new Error(`Dish ${req.params.dishId} not found`);
+            const err = new Error(`Dish ${req.params.dishId} not found`);
             err.status = 404;
             return next(err);
         } else {
-            err = new Error(`Comment ${req.params.commentId} not found`);
+            const err = new Error(`Comment ${req.params.commentId} not found`);
             err.status = 404;
             return next(err);
         }
     }, (err) => next(err)).catch((err) => next(err));
 })
 .delete(authenticate.verifyUser, (req, res, next) => {
-    Dishes.findById(req.params.dishId).then((dish) => {
+    Dishes.findById(req.params.dishId).populate("comments.author").then((dish) => {
         if (dish !== null && dish.comments.id(req.params.commentId) !== null) {
-            dish.comments.id(req.params.commentId).remove();
-            dish.save().then((dish) => {
-                Dishes.findById(dish._id)
-                .populate("comments.author").then((dish) => {
-                    res.statusCode = 200;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.json(dish);
-                });
-            })
+            if (req.user._id.equals(dish.comments.id(req.params.commentId).author._id)) {
+                dish.comments.id(req.params.commentId).remove();
+                dish.save().then((dish) => {
+                    Dishes.findById(dish._id)
+                    .populate("comments.author").then((dish) => {
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
+                        res.json(dish);
+                    });
+                })
+            } else {
+                const err = new Error("You cannot delete other user's comments");
+                err.status = 403;
+                return next(err);
+            }    
         } else if (dish === null) {
-            err = new Error(`Dish ${req.params.dishId} not found`);
+            const err = new Error(`Dish ${req.params.dishId} not found`);
             err.status = 404;
             return next(err);
         } else {
-            err = new Error(`Comment ${req.params.commentId} not found`);
+            const err = new Error(`Comment ${req.params.commentId} not found`);
             err.status = 404;
             return next(err);
         }

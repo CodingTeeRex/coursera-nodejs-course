@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const authenticate = require("../authenticate");
 
 const Promos = require('../models/promos');
 
@@ -15,7 +16,7 @@ promoRouter.route("/")
         res.json(promos);
     }, (err) => next(err)).catch((err) => next(err));
 })
-.post((req, res, next) => {
+.post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promos.create(req.body).then((promo) => {
         console.log("promo Created ", promo);
         res.statusCode = 200;
@@ -23,11 +24,11 @@ promoRouter.route("/")
         res.json(promo);
     }, (err) => next(err)).catch((err) => next(err));
 })
-.put((req, res) => {
+.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res) => {
     res.statusCode = 403;
     res.end("PUT operation not supported on /promos");
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promos.remove({}).then((resp) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -43,11 +44,11 @@ promoRouter.route("/:promoId")
         res.json(promo);
     }, (err) => next(err)).catch((err) => next(err));
 })
-.post((req, res) => {
+.post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res) => {
     res.statusCode = 403;
     res.end("POST operation not supported on /promos/" + req.params.promoId);
 })
-.put((req, res, next) => {
+.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promos.findByIdAndUpdate(req.params.promoId, {
         $set: req.body
     }, { new: true }).then((promo) => {
@@ -56,7 +57,7 @@ promoRouter.route("/:promoId")
         res.json(promo);
     }, (err) => next(err)).catch((err) => next(err));
 })
-.delete((req, res, next) => {
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Promos.findOneAndRemove(req.params.promoId).then((resp) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');

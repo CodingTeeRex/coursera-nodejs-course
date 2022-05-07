@@ -9,8 +9,21 @@ const router = express.Router();
 router.use(bodyParser.json());
 
 /* GET users listing. */
-router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
+router.get('/', authenticate.verifyUser, authenticate.verifyAdmin, async (req, res, next) => {
+  try {
+    const users = await User.find({})
+    if (users && users.length) {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.json(users);
+    } else {
+      const err = new Error("No users found!");
+      err.status = 404;
+      next(err);
+    }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post('/signup', (req, res, next) => {
